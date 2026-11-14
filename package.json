@@ -1,0 +1,25 @@
+{
+  "name": "corsairs-game-site",
+  "version": "1.0.0",
+  "description": "Corsairs orbit game with Discord auth, TikTok downloader, QR generator and keep-alive",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "discord.js": "^14.16.3",
+    "express-session": "^1.18.0",
+    "passport": "^0.7.0",
+    "passport-discord": "^0.1.4",
+    "dotenv": "^16.4.5",
+    "cors": "^2.8.5",
+    "node-fetch": "^2.7.0",
+    "qrcode": "^1.5.4",
+    "cookie-parser": "^1.4.6"
+  }
+}
