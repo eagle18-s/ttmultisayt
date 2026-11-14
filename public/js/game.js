@@ -1,7 +1,5 @@
 /**
  * Corsairs — Orbit Game
- * Top-down circular orbit game inspired by the provided video.
- * Player ship orbits a central island, collects coins, avoids projectiles.
  */
 
 class CorsairsGame {
@@ -13,17 +11,15 @@ class CorsairsGame {
     this.level = 1;
     this.difficulty = 1.4;
 
-    // Resize
     this.resize();
     window.addEventListener('resize', () => this.resize());
 
-    // Game state
     this.center = { x: 0, y: 0 };
-    this.radius = 0;          // orbit radius
+    this.radius = 0;
     this.islandR = 0;
     this.shipAngle = -Math.PI / 2;
-    this.shipSpeed = 0.018;   // rad per frame
-    this.direction = 1;       // 1 = clockwise, -1 = counter
+    this.shipSpeed = 0.018;
+    this.direction = 1;
     this.coins = [];
     this.projectiles = [];
     this.particles = [];
@@ -31,7 +27,6 @@ class CorsairsGame {
     this.spawnTimer = 0;
     this.hitCooldown = 0;
 
-    // Bind
     this.loop = this.loop.bind(this);
   }
 
@@ -98,11 +93,10 @@ class CorsairsGame {
 
   updateUI() {
     document.getElementById('levelBadge').textContent = `Level ${this.level}`;
-    document.getElementById('scoreBadge').textContent = `${this.score} 🪙`;
+    document.getElementById('scoreBadge').innerHTML = `${this.score} <span class="coin-icon"></span>`;
   }
 
   spawnProjectile() {
-    // Projectiles come from outside toward the orbit
     const angle = Math.random() * Math.PI * 2;
     const dist = this.radius * 1.8;
     this.projectiles.push({
@@ -136,14 +130,12 @@ class CorsairsGame {
   }
 
   update() {
-    // Ship movement
     this.shipAngle += this.shipSpeed * this.direction * this.difficulty;
     if (this.shipAngle > Math.PI * 2) this.shipAngle -= Math.PI * 2;
     if (this.shipAngle < 0) this.shipAngle += Math.PI * 2;
 
     const ship = this.shipPos();
 
-    // Collect coins
     for (const c of this.coins) {
       if (c.collected) continue;
       c.pulse += 0.08;
@@ -159,14 +151,12 @@ class CorsairsGame {
       }
     }
 
-    // Level up when all coins collected
     if (this.coins.every(c => c.collected)) {
       this.level++;
       this.spawnCoins();
       this.updateUI();
     }
 
-    // Projectiles
     this.spawnTimer++;
     if (this.spawnTimer > 90 / this.difficulty) {
       this.spawnTimer = 0;
@@ -181,7 +171,6 @@ class CorsairsGame {
       p.x += p.vx;
       p.y += p.vy;
 
-      // Hit ship?
       const dx = ship.x - p.x;
       const dy = ship.y - p.y;
       if (dx * dx + dy * dy < (12 + p.r) * (12 + p.r) && this.hitCooldown <= 0) {
@@ -189,14 +178,12 @@ class CorsairsGame {
         return;
       }
 
-      // Out of bounds
       if (p.x < -50 || p.x > this.canvas.width + 50 ||
           p.y < -50 || p.y > this.canvas.height + 50) {
         this.projectiles.splice(i, 1);
       }
     }
 
-    // Particles
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const pt = this.particles[i];
       pt.x += pt.vx;
@@ -209,7 +196,10 @@ class CorsairsGame {
   gameOver() {
     this.running = false;
     const go = document.getElementById('gameOver');
-    document.getElementById('finalScore').textContent = `${this.score} 🪙`;
+    document.getElementById('finalScore').innerHTML = `
+      <span class="final-number">${this.score}</span>
+      <span class="final-coin"></span>
+    `;
     go.hidden = false;
   }
 
@@ -218,41 +208,34 @@ class CorsairsGame {
     const w = this.canvas.width;
     const h = this.canvas.height;
 
-    // Sky
     const grad = ctx.createRadialGradient(this.center.x, this.center.y, 0, this.center.x, this.center.y, w * 0.7);
     grad.addColorStop(0, '#a8e0f0');
     grad.addColorStop(1, '#6ec6e0');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
 
-    // Soft orbit ring
     ctx.beginPath();
     ctx.arc(this.center.x, this.center.y, this.radius, 0, Math.PI * 2);
     ctx.strokeStyle = 'rgba(255,255,255,0.35)';
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Island (sand)
     ctx.beginPath();
     ctx.arc(this.center.x, this.center.y, this.islandR, 0, Math.PI * 2);
     ctx.fillStyle = '#e8c070';
     ctx.fill();
-    // Inner dark circle (turret base)
     ctx.beginPath();
     ctx.arc(this.center.x, this.center.y, this.islandR * 0.55, 0, Math.PI * 2);
     ctx.fillStyle = '#4a4a55';
     ctx.fill();
-    // Center detail
     ctx.beginPath();
     ctx.arc(this.center.x, this.center.y, this.islandR * 0.28, 0, Math.PI * 2);
     ctx.fillStyle = '#2a2a32';
     ctx.fill();
 
-    // Bushes
     this.drawBush(this.center.x - this.islandR * 0.55, this.center.y - this.islandR * 0.4);
     this.drawBush(this.center.x + this.islandR * 0.5, this.center.y + this.islandR * 0.45);
 
-    // Coins
     for (const c of this.coins) {
       if (c.collected) continue;
       const cx = this.center.x + Math.cos(c.angle) * this.radius;
@@ -266,27 +249,23 @@ class CorsairsGame {
       ctx.arc(cx, cy, 5 * pulse, 0, Math.PI * 2);
       ctx.fillStyle = '#ffe066';
       ctx.fill();
-      // coin shine
       ctx.fillStyle = 'rgba(255,255,255,0.5)';
       ctx.beginPath();
       ctx.arc(cx - 2, cy - 2, 2, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // Projectiles
     for (const p of this.projectiles) {
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
       ctx.fillStyle = '#2a2a2a';
       ctx.fill();
-      // trail
       ctx.beginPath();
       ctx.arc(p.x - p.vx * 2, p.y - p.vy * 2, p.r * 0.6, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(40,40,40,0.4)';
       ctx.fill();
     }
 
-    // Particles
     for (const pt of this.particles) {
       ctx.globalAlpha = pt.life / 40;
       ctx.beginPath();
@@ -296,14 +275,11 @@ class CorsairsGame {
       ctx.globalAlpha = 1;
     }
 
-    // Ship
     const ship = this.shipPos();
     ctx.save();
     ctx.translate(ship.x, ship.y);
-    // Orient ship along tangent
     const angle = this.shipAngle + (this.direction > 0 ? Math.PI / 2 : -Math.PI / 2);
     ctx.rotate(angle);
-    // Body
     ctx.beginPath();
     ctx.moveTo(14, 0);
     ctx.lineTo(-10, 8);
@@ -312,7 +288,6 @@ class CorsairsGame {
     ctx.closePath();
     ctx.fillStyle = '#5c3a1e';
     ctx.fill();
-    // Nose
     ctx.beginPath();
     ctx.moveTo(14, 0);
     ctx.lineTo(6, 4);
@@ -339,12 +314,11 @@ class CorsairsGame {
   }
 }
 
-// Global instance
 let game = null;
 
 function initGame() {
   const canvas = document.getElementById('gameCanvas');
   if (!canvas) return;
   game = new CorsairsGame(canvas);
-  game.draw(); // initial static frame
+  game.draw();
 }
