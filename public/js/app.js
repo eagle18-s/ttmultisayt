@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // Init i18n
   applyTranslations();
   const langSelect = document.getElementById('langSelect');
   if (langSelect) {
@@ -7,7 +6,6 @@ document.addEventListener('DOMContentLoaded', () => {
     langSelect.addEventListener('change', e => setLanguage(e.target.value));
   }
 
-  // Theme
   const savedTheme = localStorage.getItem('theme') || 'dark';
   document.documentElement.setAttribute('data-theme', savedTheme);
   document.querySelectorAll('.theme-btn').forEach(btn => {
@@ -21,7 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Difficulty
   const diffSelect = document.getElementById('diffSelect');
   if (diffSelect) {
     diffSelect.addEventListener('change', e => {
@@ -29,7 +26,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Menu
   const hamburger = document.getElementById('hamburger');
   const sideMenu = document.getElementById('sideMenu');
   const overlay = document.getElementById('overlay');
@@ -52,7 +48,6 @@ document.addEventListener('DOMContentLoaded', () => {
   closeMenu.addEventListener('click', closeMenuFn);
   overlay.addEventListener('click', closeMenuFn);
 
-  // Page navigation
   document.querySelectorAll('.menu-list li').forEach(li => {
     li.addEventListener('click', () => {
       const page = li.dataset.page;
@@ -61,19 +56,16 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.getElementById(`page-${page}`).classList.add('active');
       closeMenuFn();
-
-      // Pause game when leaving
       if (page !== 'game' && game) game.stop();
     });
   });
 
-  // Auth
   checkAuth();
-  document.getElementById('btnLogin')?.addEventListener('click', () => {
-    window.location.href = '/auth/discord';
-  });
+  if (window.location.search.includes('logged_in=1')) {
+    setTimeout(checkAuth, 600);
+    window.history.replaceState({}, '', window.location.pathname);
+  }
 
-  // Game
   initGame();
   const btnPlay = document.getElementById('btnPlay');
   const btnLeft = document.getElementById('btnLeft');
@@ -94,7 +86,6 @@ document.addEventListener('DOMContentLoaded', () => {
     btnPlay.textContent = '⏸';
   });
 
-  // Keyboard
   document.addEventListener('keydown', e => {
     if (e.key === 'ArrowLeft' || e.key === 'a') game?.turnLeft();
     if (e.key === 'ArrowRight' || e.key === 'd') game?.turnRight();
@@ -104,7 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Touch continuous control
   let leftInterval, rightInterval;
   btnLeft.addEventListener('touchstart', e => {
     e.preventDefault();
@@ -119,7 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   btnRight.addEventListener('touchend', () => clearInterval(rightInterval));
 
-  // TikTok
   document.getElementById('btnTiktok').addEventListener('click', async () => {
     const url = document.getElementById('tiktokUrl').value.trim();
     if (!url) return alert('URL daxil edin');
@@ -142,10 +131,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       result.innerHTML = `
-        ${data.cover ? `<img src="${data.cover}" style="width:100%;border-radius:10px;margin-bottom:12px" />` : ''}
+        \( {data.cover ? `<img src=" \){data.cover}" style="width:100%;border-radius:10px;margin-bottom:12px" />` : ''}
         <p style="margin-bottom:8px;font-weight:600">${data.title || 'Video'}</p>
         <video src="${data.videoUrl}" controls playsinline style="width:100%;border-radius:10px"></video>
-        <a href="${data.videoUrl}" download class="btn-primary" style="display:inline-block;margin-top:12px;text-decoration:none">📥 Yüklə</a>
+        <a href="${data.videoUrl}" target="_blank" download class="btn-primary" style="display:inline-block;margin-top:12px;text-decoration:none">📥 Yüklə</a>
       `;
       result.hidden = false;
     } catch (err) {
@@ -155,7 +144,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // QR
   document.getElementById('btnQr').addEventListener('click', async () => {
     const text = document.getElementById('qrText').value.trim();
     if (!text) return alert('Mətn daxil edin');
@@ -179,15 +167,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function checkAuth() {
   try {
-    const res = await fetch('/api/user');
+    const res = await fetch('/api/user', { credentials: 'include' });
     const data = await res.json();
     const area = document.getElementById('userArea');
     if (data.loggedIn) {
       area.innerHTML = `
-        ${data.avatar ? `<img src="${data.avatar}" class="user-avatar" alt="avatar" />` : ''}
+        \( {data.avatar ? `<img src=" \){data.avatar}" class="user-avatar" alt="avatar" />` : ''}
         <span class="user-name">${data.username}</span>
         <button class="btn-secondary" onclick="location.href='/auth/logout'" style="padding:6px 12px;font-size:0.8rem">Çıxış</button>
       `;
+    } else {
+      area.innerHTML = `<button class="btn-login" id="btnLogin">Discord ilə giriş</button>`;
+      document.getElementById('btnLogin')?.addEventListener('click', () => {
+        window.location.href = '/auth/discord';
+      });
     }
-  } catch (e) { /* not logged in */ }
-}
+  } catch (e) {
+    console.log('Auth check failed');
+  }
+      }
