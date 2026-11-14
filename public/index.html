@@ -10,7 +10,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 </head>
 <body>
-  <!-- Top Bar -->
   <header class="topbar">
     <button class="hamburger" id="hamburger" aria-label="Menu">
       <span></span><span></span><span></span>
@@ -24,7 +23,6 @@
     </div>
   </header>
 
-  <!-- Side Menu -->
   <nav class="side-menu" id="sideMenu">
     <div class="menu-header">
       <span>Menyu</span>
@@ -42,14 +40,12 @@
   </nav>
   <div class="overlay" id="overlay"></div>
 
-  <!-- Main Content -->
   <main>
-    <!-- GAME PAGE -->
     <section id="page-game" class="page active">
       <div class="game-wrapper">
         <div class="game-header">
           <div class="level-badge" id="levelBadge">Level 1</div>
-          <div class="score-badge" id="scoreBadge">0 🪙</div>
+          <div class="score-badge" id="scoreBadge">0 <span class="coin-icon"></span></div>
         </div>
         <canvas id="gameCanvas"></canvas>
         <div class="game-controls">
@@ -59,13 +55,15 @@
         </div>
         <div class="game-over" id="gameOver" hidden>
           <h2 data-i18n="game.scored">Sənin nəticən</h2>
-          <div class="final-score" id="finalScore">0 🪙</div>
+          <div class="final-score" id="finalScore">
+            <span class="final-number">0</span>
+            <span class="final-coin"></span>
+          </div>
           <button class="btn-primary" id="btnRestart" data-i18n="game.restart">Yenidən</button>
         </div>
       </div>
     </section>
 
-    <!-- TIKTOK PAGE -->
     <section id="page-tiktok" class="page">
       <div class="card">
         <h1 data-i18n="tiktok.title">TikTok Video Yüklə</h1>
@@ -82,7 +80,6 @@
       </div>
     </section>
 
-    <!-- QR PAGE -->
     <section id="page-qr" class="page">
       <div class="card">
         <h1 data-i18n="qr.title">QR Kod Generator</h1>
@@ -102,7 +99,6 @@
       </div>
     </section>
 
-    <!-- SETTINGS PAGE -->
     <section id="page-settings" class="page">
       <div class="card">
         <h1 data-i18n="settings.title">Ayarlar</h1>
