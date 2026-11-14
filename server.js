@@ -9,7 +9,6 @@ const cookieParser = require('cookie-parser');
 const path = require('path');
 const fetch = require('node-fetch');
 const QRCode = require('qrcode');
-const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -64,7 +63,7 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    maxAge: 7 * 24 * 60 * 60 * 1000
   }
 }));
 app.use(passport.initialize());
@@ -95,7 +94,7 @@ app.get('/api/user', (req, res) => {
       username: req.user.username,
       discriminator: req.user.discriminator,
       avatar: req.user.avatar
-        ? `https://cdn.discordapp.com/avatars/${req.user.id}/${req.user.avatar}.png`
+        ? `https://cdn.discordapp.com/avatars/\( {req.user.id}/ \){req.user.avatar}.png`
         : null
     });
   } else {
@@ -121,84 +120,118 @@ app.post('/api/qr', async (req, res) => {
   }
 });
 
-// ========== TIKTOK DOWNLOADER (no watermark) ==========
-// Uses public TikTok API proxies. For production you can swap with a paid service.
+// ========== TIKTOK DOWNLOADER (improved) ==========
 app.post('/api/tiktok', async (req, res) => {
   try {
-    const { url } = req.body;
-    if (!url || !url.includes('tiktok.com')) {
-      return res.status(400).json({ error: 'Valid TikTok URL required' });
+    let { url } = req.body;
+    if (!url) {
+      return res.status(400).json({ error: 'URL daxil edin' });
     }
 
-    // Multiple fallback endpoints (community maintained)
+    // Short linkləri həll et
+    if (url.includes('vt.tiktok.com') || url.includes('vm.tiktok.com')) {
+      try {
+        const r = await fetch(url, {
+          method: 'HEAD',
+          redirect: 'follow',
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
+        });
+        url = r.url || url;
+      } catch (e) {}
+    }
+
+    if (!url.includes('tiktok.com')) {
+      return res.status(400).json({ error: 'Yalnız TikTok linki qəbul olunur' });
+    }
+
     const endpoints = [
-      `https://api.tiklydown.eu.org/api/download?url=${encodeURIComponent(url)}`,
-      `https://tikwm.com/api/?url=${encodeURIComponent(url)}`
+      {
+        url: `https://www.tikwm.com/api/?url=${encodeURIComponent(url)}&hd=1`,
+        parse: (d) => {
+          if (d?.data?.play) {
+            return {
+              videoUrl: d.data.hdplay || d.data.play,
+              title: d.data.title || 'TikTok Video',
+              cover: d.data.cover || d.data.origin_cover
+            };
+          }
+          return null;
+        }
+      },
+      {
+        url: `https://api.tiklydown.eu.org/api/download?url=${encodeURIComponent(url)}`,
+        parse: (d) => {
+          if (d?.video?.noWatermark) {
+            return {
+              videoUrl: d.video.noWatermark,
+              title: d.title || 'TikTok Video',
+              cover: d.video?.cover
+            };
+          }
+          return null;
+        }
+      },
+      {
+        url: `https://tikdown.org/api/?url=${encodeURIComponent(url)}`,
+        parse: (d) => {
+          if (d?.nwm_video_url || d?.video) {
+            return {
+              videoUrl: d.nwm_video_url || d.video,
+              title: d.title || 'TikTok Video',
+              cover: d.cover
+            };
+          }
+          return null;
+        }
+      }
     ];
 
-    let data = null;
-    for (const endpoint of endpoints) {
+    let result = null;
+    for (const ep of endpoints) {
       try {
-        const r = await fetch(endpoint, {
-          headers: { 'User-Agent': 'Mozilla/5.0' },
-          timeout: 12000
+        const r = await fetch(ep.url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/json'
+          },
+          timeout: 15000
         });
-        if (r.ok) {
-          data = await r.json();
-          break;
-        }
-      } catch (e) { /* try next */ }
+        if (!r.ok) continue;
+        const data = await r.json();
+        result = ep.parse(data);
+        if (result && result.videoUrl) break;
+      } catch (e) {
+        console.log('TikTok endpoint failed:', e.message);
+      }
     }
 
-    if (!data) {
-      return res.status(502).json({ error: 'Could not fetch TikTok data. Try another URL or later.' });
-    }
-
-    // Normalize response
-    let videoUrl = null;
-    let title = 'TikTok Video';
-    let cover = null;
-
-    if (data.video && data.video.noWatermark) {
-      videoUrl = data.video.noWatermark;
-      title = data.title || title;
-      cover = data.video.cover || null;
-    } else if (data.data && data.data.play) {
-      videoUrl = data.data.play;
-      title = data.data.title || title;
-      cover = data.data.cover || null;
-    } else if (data.nwm_video_url) {
-      videoUrl = data.nwm_video_url;
-      title = data.title || title;
-    }
-
-    if (!videoUrl) {
-      return res.status(404).json({ error: 'No watermark-free video found' });
+    if (!result || !result.videoUrl) {
+      return res.status(502).json({
+        error: 'Video tapılmadı. Başqa link yoxla və ya bir az sonra yenidən cəhd et.'
+      });
     }
 
     res.json({
       success: true,
-      title,
-      videoUrl,
-      cover
+      title: result.title,
+      videoUrl: result.videoUrl,
+      cover: result.cover || null
     });
   } catch (err) {
     console.error('TikTok error:', err.message);
-    res.status(500).json({ error: 'Server error while processing TikTok' });
+    res.status(500).json({ error: 'Server xətası' });
   }
 });
 
 // ========== KEEP-ALIVE + DISCORD DM ==========
-const OWNER_DISCORD_ID = process.env.OWNER_DISCORD_ID || ''; // set in Render env
+const OWNER_DISCORD_ID = process.env.OWNER_DISCORD_ID || '';
 const SELF_URL = process.env.RENDER_EXTERNAL_URL || process.env.SELF_URL || `http://localhost:${PORT}`;
 
 async function keepAliveAndNotify() {
   try {
-    // 1. Ping self so Render doesn't sleep
     const ping = await fetch(`${SELF_URL}/api/ping`, { timeout: 8000 });
     const status = ping.ok ? 'OK' : `HTTP ${ping.status}`;
 
-    // 2. DM owner
     if (OWNER_DISCORD_ID && bot.isReady()) {
       try {
         const user = await bot.users.fetch(OWNER_DISCORD_ID);
@@ -227,10 +260,7 @@ app.get('/api/ping', (req, res) => {
   });
 });
 
-// Run every 2 minutes (120000 ms)
 setInterval(keepAliveAndNotify, 2 * 60 * 1000);
-
-// Also run once 30s after start
 setTimeout(keepAliveAndNotify, 30000);
 
 // ========== FALLBACK ==========
